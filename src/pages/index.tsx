@@ -59,6 +59,7 @@ const options = {
 
   },
   responsive: true,
+ // maintainAspectRatio: false,
   interaction: {
     mode: 'index' as const,
     intersect: true,
@@ -66,6 +67,14 @@ const options = {
   scales: {
     x: {
       stacked: true,
+      ticks: {
+        font: {
+          size: 10,
+          autoSkip: false,
+          maxRotation: 0,
+          minRotation: 0
+        }
+      }
     },
     y: {
       stacked: true,
@@ -163,7 +172,7 @@ export default function Home({ data }: any) {
   const [labels, setLabels] = useState<string[]>([]);
   const [datasets, setDatasets] = useState<any[]>([]);
   useEffect(() => {
-    const _labels = data.map((p: IStats) => p.mission);
+    const _labels = data.map((p: IStats, i: number) => `${p.mission}`);
     setLabels(_labels);
 
     const _datasets = [
@@ -265,7 +274,7 @@ export default function Home({ data }: any) {
       },
       {
         label: 'Operational',
-        data: data.map((p: IStats) => (parseInt(p.total_working, 0) - parseInt(p.drift, 0) - parseInt(p.ascent, 0) - parseInt(p.operational, 0))),
+        data: data.map((p: IStats) => (parseInt(p.total_working, 0) - parseInt(p.disposal_underway, 0) - parseInt(p.out_of_constellation, 0) - parseInt(p.anomaly, 0) - parseInt(p.reserve_relocating, 0) - parseInt(p.special, 0) - parseInt(p.drift, 0) - parseInt(p.ascent, 0))),
         backgroundColor: 'rgb(96, 153, 102)',
         stack: 'Group',
       },
@@ -278,7 +287,7 @@ export default function Home({ data }: any) {
         <title>Starlink Launch Statistics</title>
       </Head>
       <main
-        className={`bg-gray-50 flex min-h-max flex-col items-center justify-between p-20`}
+        className={`bg-gray-50 flex overflow-x-auto space-x-8 w-full bg min-h-max flex-col items-center justify-between p-20`}
       >
         <p className="text-black text-lg">Source: Jonathan McDowell <a className="text-blue-600 text-lg" href="https://planet4589.org" target="_blank">https://planet4589.org</a></p>
         <Bar options={options} data={{ labels, datasets }} />
