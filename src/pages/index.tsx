@@ -271,8 +271,8 @@ export default function Home({ data }: any) {
   }, [data]);
   return (
     <main
-    className={`bg-gray-50 flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-  >
+      className={`bg-gray-50 flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+    >
       <Bar options={options} data={{ labels, datasets }} />
     </main>
   )
