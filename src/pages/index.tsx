@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import Head from 'next/head'
 import Image from 'next/image'
 import { parseDocument } from 'htmlparser2';
 import { getAttributeValue, findAll, textContent } from 'domutils';
 import dayjs from 'dayjs';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -16,14 +18,14 @@ import { Bar } from 'react-chartjs-2';
 import { Inter } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
-
+const isBrowser = () => typeof window !== 'undefined';
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 interface IStats {
   mission: string;
@@ -52,13 +54,14 @@ const options = {
   plugins: {
     title: {
       display: true,
-      text: 'Jonathan Starlink Launch Statistics',
+      text: 'Starlink Launch Statistics',
     },
+
   },
   responsive: true,
   interaction: {
     mode: 'index' as const,
-    intersect: false,
+    intersect: true,
   },
   scales: {
     x: {
@@ -270,11 +273,17 @@ export default function Home({ data }: any) {
     setDatasets(_datasets);
   }, [data]);
   return (
-    <main
-      className={`bg-gray-50 flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
-    >
-      <Bar options={options} data={{ labels, datasets }} />
-    </main>
+    <div>
+      <Head>
+        <title>Starlink Launch Statistics</title>
+      </Head>
+      <main
+        className={`bg-gray-50 flex min-h-max flex-col items-center justify-between p-20`}
+      >
+        <p className="text-black text-lg">Source: Jonathan McDowell <a className="text-blue-600 text-lg" href="https://planet4589.org" target="_blank">https://planet4589.org</a></p>
+        <Bar options={options} data={{ labels, datasets }} />
+      </main>
+    </div>
   )
 }
 // This gets called on every request
