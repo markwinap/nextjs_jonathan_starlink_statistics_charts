@@ -90,7 +90,10 @@ const fetchHtml = async () => {
 
 const getImgUrl = (element: any) => {
   const { lastChild } = element || {};
-  return getAttributeValue(lastChild, 'src') || '';
+  if (lastChild) {
+    return getAttributeValue(lastChild, 'src') || '';
+  }
+  return '';
 };
 
 const parseHtml = (document: any): IStats[] => {
@@ -98,7 +101,7 @@ const parseHtml = (document: any): IStats[] => {
   const tableElements = findAll((e) => {
     return e.type === 'tag' && e.name === 'table';
   }, document.children);
-  console.log(tableElements);
+  // console.log(tableElements);
   const lastTableElement = tableElements.pop() || { children: [] };
   console.log(lastTableElement);
 
@@ -110,29 +113,31 @@ const parseHtml = (document: any): IStats[] => {
     const tdElements = findAll((e) => {
       return e.type === 'tag' && e.name === 'td';
     }, trElement.children);
-
-    if (tdElements.length === 21) {
+    //console.log(tdElements.length);
+    if (tdElements.length === 23) {
       const mission = textContent(tdElements[0]).trim();
       const total_sats = textContent(tdElements[1]).trim();
-      const early_deorbit = textContent(tdElements[2]).trim();
-      const disposal_complete = textContent(tdElements[3]).trim();
-      const reentry_after_fail = textContent(tdElements[4]).trim();
-      const total_in_orbit = textContent(tdElements[5]).trim();
-      const screened = textContent(tdElements[6]).trim();
-      const failed_decaying = textContent(tdElements[7]).trim();
-      const graveyard = textContent(tdElements[8]).trim();
-      const total_working = textContent(tdElements[9]).trim();
-      const disposal_underway = textContent(tdElements[10]).trim();
-      const out_of_constellation = textContent(tdElements[11]).trim();
-      const anomaly = textContent(tdElements[12]).trim();
-      const reserve_relocating = textContent(tdElements[13]).trim();
-      const special = textContent(tdElements[14]).trim();
-      const drift = textContent(tdElements[15]).trim();
-      const ascent = textContent(tdElements[16]).trim();
-      const operational = textContent(tdElements[17]).trim();
-      const orbit_heights = textContent(tdElements[18]).trim();
-      const phase_vs_plane = getImgUrl(tdElements[19]?.lastChild)
-      const planevs_time = getImgUrl(tdElements[20]?.lastChild)
+      const failed_to_orbit = textContent(tdElements[2]).trim();
+      const early_deorbit = textContent(tdElements[3]).trim();
+      const disposal_complete = textContent(tdElements[4]).trim();
+      const reentry_after_fail = textContent(tdElements[5]).trim();
+      const total_down = textContent(tdElements[6]).trim();
+      const total_in_orbit = textContent(tdElements[7]).trim();
+      const screened = textContent(tdElements[8]).trim();
+      const failed_decaying = textContent(tdElements[9]).trim();
+      const graveyard = textContent(tdElements[10]).trim();
+      const total_working = textContent(tdElements[11]).trim();
+      const disposal_underway = textContent(tdElements[12]).trim();
+      const out_of_constellation = textContent(tdElements[13]).trim();
+      const anomaly = textContent(tdElements[14]).trim();
+      const reserve_relocating = textContent(tdElements[15]).trim();
+      const special = textContent(tdElements[16]).trim();
+      const drift = textContent(tdElements[17]).trim();
+      const ascent = textContent(tdElements[18]).trim();
+      const operational = textContent(tdElements[19]).trim();
+      const orbit_heights =  getImgUrl(tdElements[20]?.lastChild)
+      const phase_vs_plane = getImgUrl(tdElements[21]?.lastChild)
+      const planevs_time = getImgUrl(tdElements[22]?.lastChild)
 
       res.push({
         mission,
