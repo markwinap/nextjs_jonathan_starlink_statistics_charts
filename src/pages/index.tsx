@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head'
 import Script from 'next/script'
-import { parseDocument } from 'htmlparser2';
-import { getAttributeValue, findAll, textContent } from 'domutils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Pie, PieChart, Brush } from 'recharts';
+import Table from 'antd/lib/table';
+import Button from 'antd/lib/button';
+import Col from 'antd/lib/col';
+import Collapse from 'antd/lib/collapse';
+import Flex from 'antd/lib/flex';
+import Row from 'antd/lib/grid/row';
+import { CollapseProps, type TableColumnsType, type TableProps } from 'antd';
+import { utils, write, writeFile } from 'xlsx';
 
 interface IStats {
   mission: string;
+  number: number;
+  year: number;
+  day: number;
+  date: string
   total_sats: number;
   early_deorbit: number;
   disposal_complete: number;
@@ -29,126 +39,190 @@ interface IStats {
   phase_vs_plane: string;
   planevs_time: string;
 };
+
 interface ChartLabel {
   name: string;
   color: string;
 }
 
-const fetchHtml = async () => {
-  const response = await fetch('https://planet4589.org/space/con/star/stats.html');
-  const html = await response.text();
-  return html;
-};
+// fetch json from /api/data and parse it as IStats[]
+const fetchJson = async () => {
+  const response = await fetch('/api/data');
+  const data = await response.json();
+  return data;
+}
 
-const getImgUrl = (element: any) => {
-  const { lastChild } = element || {};
-  if (lastChild) {
-    return getAttributeValue(lastChild, 'src') || '';
+const labels: ChartLabel[] = [
+  { name: 'early_deorbit', color: 'rgb(241, 90, 89)' },
+  { name: 'disposal_complete', color: 'rgb(237, 43, 42)' },
+  { name: 'reentry_after_fail', color: 'rgb(210, 19, 18)' },
+  { name: 'screened', color: 'rgb(231, 70, 70)' },
+  { name: 'failed_decaying', color: 'rgb(252, 79, 0)' },
+  { name: 'disposal_underway', color: 'rgb(252, 79, 0)' },
+  { name: 'out_of_constellation', color: 'rgb(255, 217, 90)' },
+  { name: 'anomaly', color: 'rgb(249, 123, 34)' },
+  { name: 'reserve_relocating', color: 'rgb(8, 131, 149)' },
+  { name: 'special', color: 'rgb(10, 77, 104)' },
+  { name: 'drift', color: 'rgb(157, 192, 139)' },
+  { name: 'ascent', color: 'rgb(199, 232, 202)' },
+  { name: 'total_operational', color: 'rgb(96, 153, 102)' },
+];
+
+export default function Home() {
+  const [data, setData] = useState<IStats[]>([]);
+  const [totals, setTotals] = useState<{
+    total_sats: number,
+    total_operational: number,
+    reserve_relocating: number,
+  }>({
+    total_sats: 0,
+    total_operational: 0,
+    reserve_relocating: 0,
+  });
+
+
+  const exportDataExcel = () => {
+    const worksheet = utils.json_to_sheet(data);
+    const workbook = utils.book_new();
+    utils.book_append_sheet(workbook, worksheet, 'data');
+    writeFile(workbook, "data.xlsx");
   }
-  return '';
-};
 
-const parseHtml = (document: any): IStats[] => {
-  const res = [];
-  const tableElements = findAll((e) => {
-    return e.type === 'tag' && e.name === 'table';
-  }, document.children);
-  // console.log(tableElements);
-  const lastTableElement = tableElements.pop() || { children: [] };
-  // console.log(lastTableElement);
-
-  const trElements = findAll((e) => {
-    return e.type === 'tag' && e.name === 'tr';
-  }, lastTableElement.children);
-
-  for (const trElement of trElements) {
-    const tdElements = findAll((e) => {
-      return e.type === 'tag' && e.name === 'td';
-    }, trElement.children);
-    //console.log(tdElements.length);
-    if (tdElements.length === 23) {
-      const mission = textContent(tdElements[0]).trim();
-      const total_sats = textContent(tdElements[1]).trim();
-      const failed_to_orbit = textContent(tdElements[2]).trim();
-      const early_deorbit = textContent(tdElements[3]).trim();
-      const disposal_complete = textContent(tdElements[4]).trim();
-      const reentry_after_fail = textContent(tdElements[5]).trim();
-      const total_down = textContent(tdElements[6]).trim();
-      const total_in_orbit = textContent(tdElements[7]).trim();
-      const screened = textContent(tdElements[8]).trim();
-      const failed_decaying = textContent(tdElements[9]).trim();
-      const graveyard = textContent(tdElements[10]).trim();
-      const total_working = textContent(tdElements[11]).trim();
-      const disposal_underway = textContent(tdElements[12]).trim();
-      const out_of_constellation = textContent(tdElements[13]).trim();
-      const anomaly = textContent(tdElements[14]).trim();
-      const reserve_relocating = textContent(tdElements[15]).trim();
-      const special = textContent(tdElements[16]).trim();
-      const drift = textContent(tdElements[17]).trim();
-      const ascent = textContent(tdElements[18]).trim();
-      const operational = textContent(tdElements[19]).trim();
-      const orbit_heights = getImgUrl(tdElements[20]?.lastChild)
-      const phase_vs_plane = getImgUrl(tdElements[21]?.lastChild)
-      const planevs_time = getImgUrl(tdElements[22]?.lastChild)
-
-      res.push({
-        mission,
-        total_sats: parseInt(total_sats, 0),
-        early_deorbit: parseInt(early_deorbit, 0),
-        disposal_complete: parseInt(disposal_complete, 0),
-        reentry_after_fail: parseInt(reentry_after_fail, 0),
-        total_in_orbit: parseInt(total_in_orbit, 0),
-        screened: parseInt(screened, 0),
-        failed_decaying: parseInt(failed_decaying, 0),
-        graveyard: parseInt(graveyard, 0),
-        total_working: parseInt(total_working, 0),
-        disposal_underway: parseInt(disposal_underway, 0),
-        out_of_constellation: parseInt(out_of_constellation, 0),
-        anomaly: parseInt(anomaly, 0),
-        reserve_relocating: parseInt(reserve_relocating, 0),
-        special: parseInt(special, 0),
-        drift: parseInt(drift, 0),
-        ascent: parseInt(ascent, 0),
-        operational: parseInt(operational, 0),
-        total_operational: (parseInt(total_working, 0) - parseInt(disposal_underway, 0) - parseInt(out_of_constellation, 0) - parseInt(anomaly, 0) - parseInt(reserve_relocating, 0) - parseInt(special, 0) - parseInt(drift, 0) - parseInt(ascent, 0)),
-        orbit_heights,
-        phase_vs_plane,
-        planevs_time,
-      });
-    }
+  const exportDataJson = () => {
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'data.json';
+    a.click();
   }
-  return res;
-};
 
-const getDate = (mission: string) => {
-  // TODO: date is in an unusual format
-  const date = mission.split('(')[1].split(',')[1].trim();
-  console.log(date);
-};
+  const columns: TableColumnsType<IStats> = [
+    {
+      title: 'Mission',
+      dataIndex: 'mission',
+      key: 'mission',
+      sorter: (a, b) => a.mission.localeCompare(b.mission),
+      sortDirections: ['descend', 'ascend'],
+    },
+    {
+      title: 'Number',
+      dataIndex: 'number',
+      key: 'number',
+      sorter: (a, b) => a.number - b.number,
+      sortDirections: ['descend', 'ascend'],
+    },
+    {
+      title: 'Date',
+      dataIndex: 'date',
+      key: 'date',
+      sorter: (a, b) => a.date.localeCompare(b.date),
+      sortDirections: ['descend', 'ascend'],
+    },
+    {
+      title: 'Total Sats',
+      dataIndex: 'total_sats',
+      key: 'total_sats',
+      sorter: (a, b) => a.total_sats - b.total_sats,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // total_working
+    {
+      title: 'Total Working',
+      dataIndex: 'total_working',
+      key: 'total_working',
+      sorter: (a, b) => a.total_working - b.total_working,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // total_operational
+    {
+      title: 'Total Operational',
+      dataIndex: 'total_operational',
+      key: 'total_operational',
+      sorter: (a, b) => a.total_operational - b.total_operational,
+      sortDirections: ['descend', 'ascend'],
+    },
+    //total_in_orbit
+    {
+      title: 'Total In Orbit',
+      dataIndex: 'total_in_orbit',
+      key: 'total_in_orbit',
+      sorter: (a, b) => a.total_in_orbit - b.total_in_orbit,
+      sortDirections: ['descend', 'ascend'],
+    },
+    //early_deorbit
+    {
+      title: 'Early Deorbit',
+      dataIndex: 'early_deorbit',
+      key: 'early_deorbit',
+      sorter: (a, b) => a.early_deorbit - b.early_deorbit,
+      sortDirections: ['descend', 'ascend'],
+    },
+    //disposal_complete
+    {
+      title: 'Disposal Complete',
+      dataIndex: 'disposal_complete',
+      key: 'disposal_complete',
+      sorter: (a, b) => a.disposal_complete - b.disposal_complete,
+      sortDirections: ['descend', 'ascend'],
+    },
+    //disposal_underway
+    {
+      title: 'Disposal Underway',
+      dataIndex: 'disposal_underway',
+      key: 'disposal_underway',
+      sorter: (a, b) => a.disposal_underway - b.disposal_underway,
+      sortDirections: ['descend', 'ascend'],
+    },
+    //out_of_constellation
+    {
+      title: 'Out of Constellation',
+      dataIndex: 'out_of_constellation',
+      key: 'out_of_constellation',
+      sorter: (a, b) => a.out_of_constellation - b.out_of_constellation,
+      sortDirections: ['descend', 'ascend'],
+    },
+  ];
 
-export default function Home({ data }: { data: IStats[] }) {
-  const [labels, setLabels] = useState<ChartLabel[]>([]);
+  const items: CollapseProps['items'] = [
+    {
+      key: '1',
+      label: 'Data Table',
+      children: <Row>
+        <Col span={24}>
+          <Flex gap="small" wrap>
+            <Button
+              type="primary"
+              onClick={exportDataExcel}
+            >Export Excel</Button>
+            <Button
+              onClick={exportDataJson}
+            >Export JSON</Button>
+          </Flex>
+        </Col>
+        <Col span={24}><Table columns={columns} dataSource={data} /></Col>
+      </Row>,
+    },
+  ];
+
+  const fetchData = async () => {
+    const data = await fetchJson() as unknown as IStats[];
+    setData(data);
+    // totals
+    const total_sats = data.reduce((acc, curr) => acc + curr.total_sats, 0);
+    const total_operational = data.reduce((acc, curr) => acc + curr.total_operational, 0);
+    const reserve_relocating = data.reduce((acc, curr) => acc + curr.reserve_relocating, 0);
+    setTotals({
+      total_sats,
+      total_operational,
+      reserve_relocating,
+    });
+  };
+
   useEffect(() => {
-
-    const _labels = [
-      { name: 'early_deorbit', color: 'rgb(241, 90, 89)' },
-      { name: 'disposal_complete', color: 'rgb(237, 43, 42)' },
-      { name: 'reentry_after_fail', color: 'rgb(210, 19, 18)' },
-      { name: 'screened', color: 'rgb(231, 70, 70)' },
-      { name: 'failed_decaying', color: 'rgb(252, 79, 0)' },
-      { name: 'disposal_underway', color: 'rgb(252, 79, 0)' },
-      { name: 'out_of_constellation', color: 'rgb(255, 217, 90)' },
-      { name: 'anomaly', color: 'rgb(249, 123, 34)' },
-      { name: 'reserve_relocating', color: 'rgb(8, 131, 149)' },
-      { name: 'special', color: 'rgb(10, 77, 104)' },
-      { name: 'drift', color: 'rgb(157, 192, 139)' },
-      { name: 'ascent', color: 'rgb(199, 232, 202)' },
-      { name: 'total_operational', color: 'rgb(96, 153, 102)' },
-    ];
-    setLabels(_labels);
-
-    //setChartData
-  }, [data]);
+    fetchData();
+  }, []);
 
   return (
     <>
@@ -160,6 +234,13 @@ export default function Home({ data }: { data: IStats[] }) {
       <Script src="https://unpkg.com/recharts/umd/Recharts.min.js" />
       <main className={`bg-gray-50 flex overflow-x-auto space-x-8 w-full bg min-h-max flex-col items-center justify-between p-20`}>
         <p className="text-black text-lg">Source: Jonathan McDowell <a className="text-blue-600 text-md" href="https://planet4589.org" target="_blank">https://planet4589.org</a></p>
+        <Collapse
+          items={items}
+          defaultActiveKey={['2']}
+          style={{ width: '100%' }}
+          destroyInactivePanel
+        />
+
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             width={500}
@@ -180,19 +261,22 @@ export default function Home({ data }: { data: IStats[] }) {
             {
               labels.map((label, i) => <Bar key={i} dataKey={label.name} stackId="a" fill={label.color} />)
             }
+            <Brush dataKey="name" height={30} stroke="#8884d8" />
           </BarChart>
+        </ResponsiveContainer>
+        {/* totals pie chart */}
+        <ResponsiveContainer width="100%" height="100%">
+        <PieChart width={500} height={500}>
+          <Pie data={[
+            { name: 'Total Nonfunctional', value: totals.total_sats - totals.total_operational, fill: 'rgb(241, 90, 89)' },
+            { name: 'Total Operational', value: totals.total_operational, fill: 'rgb(96, 153, 102)' },
+            { name: 'Reserve Relocating', value: totals.reserve_relocating, fill: 'rgb(8, 131, 149)' },
+          ]} dataKey="value" cx="50%" cy="50%" outerRadius={200} label />
+          <Tooltip />
+          <Legend />
+        </PieChart>
         </ResponsiveContainer>
       </main>
     </>
   )
-}
-// This gets called on every request
-export async function getServerSideProps() {
-  // Fetch data from external API
-  const html = await fetchHtml();
-  const dom = parseDocument(html);
-  const data = parseHtml(dom);
-
-  // Pass data to the page via props
-  return { props: { data } }
 }
