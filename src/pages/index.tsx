@@ -13,31 +13,35 @@ import { utils, write, writeFile } from 'xlsx';
 
 interface IStats {
   mission: string;
+  total_sats_launched: number;// not in use
+  failed_to_orbit: number; // not in use - f
+  early_deorbit: number;// F
+  disposal_complete: number;// R
+  reentry_after_fail: number;// M
+  total_down: number; // not in use
+  total_in_orbit: number;
+  screened: number;// F
+  failed_decaying: number;// M
+  graveyard: number;// G
+  total_working: number;
+  disposal_underway: number; // R
+  out_of_constellation: number; // L
+  anomaly: number; // U
+  reserve_relocating: number; // T
+  special: number; // S
+  drift: number; // D
+  ascent: number;// A
+  operational_orbit: number; // O
+  //orbit_heights: string;
+  //phase_vs_plane: string;
+  //planevs_time: string;
+
   number: number;
   year: number;
   day: number;
   date: string
-  total_sats: number;
-  early_deorbit: number;
-  disposal_complete: number;
-  reentry_after_fail: number;
-  total_in_orbit: number;
-  screened: number;
-  failed_decaying: number;
-  graveyard: number;
-  total_working: number;
-  disposal_underway: number;
-  out_of_constellation: number;
-  anomaly: number;
-  reserve_relocating: number;
-  special: number;
-  drift: number;
-  ascent: number;
-  operational: number;
+  
   total_operational: number;
-  orbit_heights: string;
-  phase_vs_plane: string;
-  planevs_time: string;
 };
 
 interface ChartLabel {
@@ -54,12 +58,14 @@ const fetchJson = async () => {
 
 const labels: ChartLabel[] = [
   { name: 'early_deorbit', color: 'rgb(241, 90, 89)' },
+  { name: 'failed_to_orbit', color: 'rgb(241, 90, 89)' },
   { name: 'disposal_complete', color: 'rgb(237, 43, 42)' },
   { name: 'reentry_after_fail', color: 'rgb(210, 19, 18)' },
   { name: 'screened', color: 'rgb(231, 70, 70)' },
   { name: 'failed_decaying', color: 'rgb(252, 79, 0)' },
   { name: 'disposal_underway', color: 'rgb(252, 79, 0)' },
   { name: 'out_of_constellation', color: 'rgb(255, 217, 90)' },
+  { name: 'graveyard', color: 'rgb(255, 217, 90)' },
   { name: 'anomaly', color: 'rgb(249, 123, 34)' },
   { name: 'reserve_relocating', color: 'rgb(8, 131, 149)' },
   { name: 'special', color: 'rgb(10, 77, 104)' },
@@ -121,18 +127,10 @@ export default function Home() {
       sortDirections: ['descend', 'ascend'],
     },
     {
-      title: 'Total Sats',
-      dataIndex: 'total_sats',
-      key: 'total_sats',
-      sorter: (a, b) => a.total_sats - b.total_sats,
-      sortDirections: ['descend', 'ascend'],
-    },
-    // total_working
-    {
-      title: 'Total Working',
-      dataIndex: 'total_working',
-      key: 'total_working',
-      sorter: (a, b) => a.total_working - b.total_working,
+      title: 'Total Sats Launched',
+      dataIndex: 'total_sats_launched',
+      key: 'total_sats_launched',
+      sorter: (a, b) => a.total_sats_launched - b.total_sats_launched,
       sortDirections: ['descend', 'ascend'],
     },
     // total_operational
@@ -143,15 +141,15 @@ export default function Home() {
       sorter: (a, b) => a.total_operational - b.total_operational,
       sortDirections: ['descend', 'ascend'],
     },
-    //total_in_orbit
+    // failed_to_orbit
     {
-      title: 'Total In Orbit',
-      dataIndex: 'total_in_orbit',
-      key: 'total_in_orbit',
-      sorter: (a, b) => a.total_in_orbit - b.total_in_orbit,
+      title: 'Failed to Orbit',
+      dataIndex: 'failed_to_orbit',
+      key: 'failed_to_orbit',
+      sorter: (a, b) => a.failed_to_orbit - b.failed_to_orbit,
       sortDirections: ['descend', 'ascend'],
     },
-    //early_deorbit
+    // early_deorbit
     {
       title: 'Early Deorbit',
       dataIndex: 'early_deorbit',
@@ -159,7 +157,7 @@ export default function Home() {
       sorter: (a, b) => a.early_deorbit - b.early_deorbit,
       sortDirections: ['descend', 'ascend'],
     },
-    //disposal_complete
+    // disposal_complete
     {
       title: 'Disposal Complete',
       dataIndex: 'disposal_complete',
@@ -167,7 +165,63 @@ export default function Home() {
       sorter: (a, b) => a.disposal_complete - b.disposal_complete,
       sortDirections: ['descend', 'ascend'],
     },
-    //disposal_underway
+    // reentry_after_fail
+    {
+      title: 'Reentry After Fail',
+      dataIndex: 'reentry_after_fail',
+      key: 'reentry_after_fail',
+      sorter: (a, b) => a.reentry_after_fail - b.reentry_after_fail,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // total_down
+    {
+      title: 'Total Down',
+      dataIndex: 'total_down',
+      key: 'total_down',
+      sorter: (a, b) => a.total_down - b.total_down,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // total_in_orbit
+    {
+      title: 'Total in Orbit',
+      dataIndex: 'total_in_orbit',
+      key: 'total_in_orbit',
+      sorter: (a, b) => a.total_in_orbit - b.total_in_orbit,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // screened
+    {
+      title: 'Screened',
+      dataIndex: 'screened',
+      key: 'screened',
+      sorter: (a, b) => a.screened - b.screened,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // failed_decaying
+    {
+      title: 'Failed Decaying',
+      dataIndex: 'failed_decaying',
+      key: 'failed_decaying',
+      sorter: (a, b) => a.failed_decaying - b.failed_decaying,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // graveyard
+    {
+      title: 'Graveyard',
+      dataIndex: 'graveyard',
+      key: 'graveyard',
+      sorter: (a, b) => a.graveyard - b.graveyard,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // total_working
+    {
+      title: 'Total Working',
+      dataIndex: 'total_working',
+      key: 'total_working',
+      sorter: (a, b) => a.total_working - b.total_working,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // disposal_underway
     {
       title: 'Disposal Underway',
       dataIndex: 'disposal_underway',
@@ -175,12 +229,60 @@ export default function Home() {
       sorter: (a, b) => a.disposal_underway - b.disposal_underway,
       sortDirections: ['descend', 'ascend'],
     },
-    //out_of_constellation
+    // out_of_constellation
     {
       title: 'Out of Constellation',
       dataIndex: 'out_of_constellation',
       key: 'out_of_constellation',
       sorter: (a, b) => a.out_of_constellation - b.out_of_constellation,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // anomaly
+    {
+      title: 'Anomaly',
+      dataIndex: 'anomaly',
+      key: 'anomaly',
+      sorter: (a, b) => a.anomaly - b.anomaly,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // reserve_relocating
+    {
+      title: 'Reserve Relocating',
+      dataIndex: 'reserve_relocating',
+      key: 'reserve_relocating',
+      sorter: (a, b) => a.reserve_relocating - b.reserve_relocating,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // special
+    {
+      title: 'Special',
+      dataIndex: 'special',
+      key: 'special',
+      sorter: (a, b) => a.special - b.special,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // drift
+    {
+      title: 'Drift',
+      dataIndex: 'drift',
+      key: 'drift',
+      sorter: (a, b) => a.drift - b.drift,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // ascent
+    {
+      title: 'Ascent',
+      dataIndex: 'ascent',
+      key: 'ascent',
+      sorter: (a, b) => a.ascent - b.ascent,
+      sortDirections: ['descend', 'ascend'],
+    },
+    // operational_orbit
+    {
+      title: 'Operational Orbit',
+      dataIndex: 'operational_orbit',
+      key: 'operational_orbit',
+      sorter: (a, b) => a.operational_orbit - b.operational_orbit,
       sortDirections: ['descend', 'ascend'],
     },
   ];
@@ -210,7 +312,7 @@ export default function Home() {
     const data = await fetchJson() as unknown as IStats[];
     setData(data);
     // totals
-    const total_sats = data.reduce((acc, curr) => acc + curr.total_sats, 0);
+    const total_sats = data.reduce((acc, curr) => acc + curr.total_sats_launched, 0);
     const total_operational = data.reduce((acc, curr) => acc + curr.total_operational, 0);
     const reserve_relocating = data.reduce((acc, curr) => acc + curr.reserve_relocating, 0);
     setTotals({
