@@ -1,5 +1,6 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from 'next'
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
 import { parseDocument } from 'htmlparser2';
 import { getAttributeValue, findAll, textContent } from 'domutils';
 import dayjs from 'dayjs';
@@ -36,7 +37,6 @@ interface IStats {
   
   total_operational: number;
 };
-
 const fetchHtml = async () => {
   const response = await fetch('https://planet4589.org/space/con/star/stats.html');
   const html = await response.text();
@@ -161,14 +161,10 @@ const parseHtml = (document: any): IStats[] => {
   return res;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-
+export async function GET(request: Request) {
   const html = await fetchHtml();
   const dom = parseDocument(html);
   const data = parseHtml(dom);
 
-  res.status(200).json(data)
+  return NextResponse.json(data);
 }

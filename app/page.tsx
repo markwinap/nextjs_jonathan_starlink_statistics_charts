@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+//export const dynamic = "force-dynamic"; // This disables SSG and ISR
+"use client";
 import Head from 'next/head'
 import Script from 'next/script'
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Pie, PieChart, Brush } from 'recharts';
 import Table from 'antd/lib/table';
 import Button from 'antd/lib/button';
@@ -10,6 +12,10 @@ import Flex from 'antd/lib/flex';
 import Row from 'antd/lib/grid/row';
 import { CollapseProps, type TableColumnsType, type TableProps } from 'antd';
 import { utils, write, writeFile } from 'xlsx';
+
+import prisma from "@/lib/prisma";
+import Link from "next/link";
+
 
 interface IStats {
   mission: string;
@@ -40,7 +46,7 @@ interface IStats {
   year: number;
   day: number;
   date: string
-  
+
   total_operational: number;
 };
 
@@ -51,7 +57,7 @@ interface ChartLabel {
 
 // fetch json from /api/data and parse it as IStats[]
 const fetchJson = async () => {
-  const response = await fetch('/api/data');
+  const response = await fetch('/api/current');
   const data = await response.json();
   return data;
 }
@@ -74,7 +80,21 @@ const labels: ChartLabel[] = [
   { name: 'total_operational', color: 'rgb(96, 153, 102)' },
 ];
 
+
 export default function Home() {
+  // const posts = await prisma.post.findMany({
+  //   orderBy: {
+  //     createdAt: "desc",
+  //   },
+  //   take: 6,
+  //   include: {
+  //     author: {
+  //       select: {
+  //         name: true,
+  //       },
+  //     },
+  //   },
+  // });
   const [data, setData] = useState<IStats[]>([]);
   const [totals, setTotals] = useState<{
     total_sats: number,
@@ -291,7 +311,7 @@ export default function Home() {
     {
       key: '1',
       label: 'Data Table',
-      children: <Row>
+      children: <Row key="table_1">
         <Col span={24}>
           <Flex gap="small" wrap>
             <Button
@@ -303,7 +323,12 @@ export default function Home() {
             >Export JSON</Button>
           </Flex>
         </Col>
-        <Col span={24}><Table columns={columns} dataSource={data} /></Col>
+        <Col span={24}>
+          <Table columns={columns}
+            dataSource={data}
+            scroll={{ x: 'max-content' }}
+          />
+        </Col>
       </Row>,
     },
   ];
@@ -326,59 +351,79 @@ export default function Home() {
     fetchData();
   }, []);
 
+  // const posts = await prisma.post.findMany({
+  //   orderBy: {
+  //     createdAt: "desc",
+  //   },
+  //   take: 6,
+  //   include: {
+  //     author: {
+  //       select: {
+  //         name: true,
+  //       },
+  //     },
+  //   },
+  // });
+
   return (
     <>
       <Head>
         <title>Starlink Launch Statistics</title>
       </Head>
-      <Script src="https://unpkg.com/react/umd/react.production.min.js" />
-      <Script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js" />
-      <Script src="https://unpkg.com/recharts/umd/Recharts.min.js" />
-      <main className={`bg-gray-50 flex overflow-x-auto space-x-8 w-full bg min-h-max flex-col items-center justify-between p-20`}>
+      <main className={`bg-gray-50 flex w-full min-h-screen flex-col items-center justify-start p-20 gap-8`}>
         <p className="text-black text-lg">Source: Jonathan McDowell <a className="text-blue-600 text-md" href="https://planet4589.org" target="_blank">https://planet4589.org</a></p>
         <Collapse
           items={items}
           defaultActiveKey={['2']}
           style={{ width: '100%' }}
-          destroyInactivePanel
+          destroyOnHidden
         />
 
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            width={500}
-            height={300}
-            data={data}
-            margin={{
-              top: 20,
-              right: 30,
-              left: 20,
-              bottom: 5,
-            }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="mission" />
-            <YAxis />
-            <Tooltip />
-            <Legend />
-            {
-              labels.map((label, i) => <Bar key={i} dataKey={label.name} stackId="a" fill={label.color} />)
-            }
-            <Brush dataKey="name" height={30} stroke="#8884d8" />
-          </BarChart>
-        </ResponsiveContainer>
-        {/* totals pie chart */}
-        <ResponsiveContainer width="100%" height="100%">
-        <PieChart width={500} height={500}>
-          <Pie data={[
-            { name: 'Total Nonfunctional', value: totals.total_sats - totals.total_operational, fill: 'rgb(241, 90, 89)' },
-            { name: 'Total Operational', value: totals.total_operational, fill: 'rgb(96, 153, 102)' },
-            { name: 'Reserve Relocating', value: totals.reserve_relocating, fill: 'rgb(8, 131, 149)' },
-          ]} dataKey="value" cx="50%" cy="50%" outerRadius={200} label />
-          <Tooltip />
-          <Legend />
-        </PieChart>
-        </ResponsiveContainer>
+        <div style={{ width: '100%', height: '600px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={data}
+              margin={{
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 5,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mission" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {
+                labels.map((label, i) => <Bar key={`bar-${i}`} dataKey={label.name} stackId="a" fill={label.color} />)
+              }
+              <Brush dataKey="mission" height={30} stroke="#8884d8" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div style={{ width: '100%', height: '500px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={[
+                  { name: 'Total Nonfunctional', value: totals.total_sats - totals.total_operational, fill: 'rgb(241, 90, 89)' },
+                  { name: 'Total Operational', value: totals.total_operational, fill: 'rgb(96, 153, 102)' },
+                  { name: 'Reserve Relocating', value: totals.reserve_relocating, fill: 'rgb(8, 131, 149)' },
+                ]}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                outerRadius={150}
+                label
+              />
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </main>
     </>
-  )
+  );
 }

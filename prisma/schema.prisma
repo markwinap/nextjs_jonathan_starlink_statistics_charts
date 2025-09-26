@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Stats {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  mission String
+  total_sats_launched Int
+  failed_to_orbit Int
+  early_deorbit Int
+  disposal_complete Int
+  reentry_after_fail Int
+  total_down Int
+  total_in_orbit Int
+  screened Int
+  failed_decaying Int
+  graveyard Int
+  total_working Int
+  disposal_underway Int
+  out_of_constellation Int
+  anomaly Int
+  reserve_relocating Int
+  special Int
+  drift Int
+  ascent Int
+  operational_orbit Int
+  number Int
+  year Int
+  day Int
+  date String
+  total_operational Int
+}
