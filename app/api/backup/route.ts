@@ -28,7 +28,7 @@ interface IStats {
   date: string;
   total_operational: number;
 }
-
+// Source https://web.archive.org/cdx/search/cdx?url=planet4589.org/space/con/star/stats.html&output=json&fl=timestamp,original,statuscode,mimetype,length
 const archives = [
   [
     "20221125040757",
