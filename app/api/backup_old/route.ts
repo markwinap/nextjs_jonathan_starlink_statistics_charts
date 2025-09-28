@@ -1,0 +1,361 @@
+import prisma from "@/lib/prisma";
+import { NextResponse } from "next/server";
+
+interface IStats {
+  mission: string;
+  total_sats_launched: number;
+  failed_to_orbit: number;
+  early_deorbit: number;
+  disposal_complete: number;
+  reentry_after_fail: number;
+  total_down: number;
+  total_in_orbit: number;
+  screened: number;
+  failed_decaying: number;
+  graveyard: number;
+  total_working: number;
+  disposal_underway: number;
+  out_of_constellation: number;
+  anomaly: number;
+  reserve_relocating: number;
+  special: number;
+  drift: number;
+  ascent: number;
+  operational_orbit: number;
+  number: number;
+  year: number;
+  day: number;
+  date: string;
+  total_operational: number;
+}
+// Source https://web.archive.org/cdx/search/cdx?url=planet4589.org/space/con/star/stats.html&output=json&fl=timestamp,original,statuscode,mimetype,length
+const archives = [
+["20221125040757","https://planet4589.org/space/con/star/stats.html","200","text/html","5257"],
+["20221125202441","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","620"],
+["20221130171832","http://planet4589.org/space/con/star/stats.html","200","text/html","6711"],
+["20221202201407","https://planet4589.org/space/con/star/stats.html","200","text/html","6386"],
+["20221202214105","https://planet4589.org/space/con/star/stats.html","200","text/html","6554"],
+["20221202215054","https://planet4589.org/space/con/star/stats.html","200","text/html","6555"],
+["20221202215636","https://planet4589.org/space/con/star/stats.html","200","text/html","6556"],
+["20221203095153","https://planet4589.org/space/con/star/stats.html","200","text/html","6558"],
+["20221205235822","https://planet4589.org/space/con/star/stats.html","200","text/html","5287"],
+["20221206142447","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","626"],
+["20221206175043","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20221206175645","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20221207112541","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20221208113755","https://planet4589.org/space/con/star/stats.html","200","text/html","6566"],
+["20221210020509","http://planet4589.org/space/con/star/stats.html","-","warc/revisit","789"],
+["20221215204042","https://planet4589.org/space/con/star/stats.html","200","text/html","6564"],
+["20221216220028","https://planet4589.org/space/con/star/stats.html","200","text/html","7598"],
+["20221218113910","https://planet4589.org/space/con/star/stats.html","200","text/html","7656"],
+["20221220000957","https://planet4589.org/space/con/star/stats.html","200","text/html","6632"],
+["20221220082223","https://planet4589.org/space/con/star/stats.html","200","text/html","6632"],
+["20221220094110","https://planet4589.org/space/con/star/stats.html","200","text/html","7673"],
+["20221220193952","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20221221221819","https://planet4589.org/space/con/star/stats.html","200","text/html","7666"],
+["20221227134951","https://planet4589.org/space/con/star/stats.html","200","text/html","6613"],
+["20221227135544","https://planet4589.org/space/con/star/stats.html","200","text/html","6614"],
+["20221227172310","https://planet4589.org/space/con/star/stats.html","200","text/html","6615"],
+["20221227185127","https://planet4589.org/space/con/star/stats.html","200","text/html","6613"],
+["20221228125233","https://planet4589.org/space/con/star/stats.html","200","text/html","6614"],
+["20221228153705","https://planet4589.org/space/con/star/stats.html","200","text/html","6614"],
+["20221228162334","https://planet4589.org/space/con/star/stats.html","200","text/html","6688"],
+["20221228232307","https://planet4589.org/space/con/star/stats.html","200","text/html","6689"],
+["20230104133818","https://planet4589.org/space/con/star/stats.html","200","text/html","6704"],
+["20230109215131","https://planet4589.org/space/con/star/stats.html","200","text/html","6695"],
+["20230110185112","https://planet4589.org/space/con/star/stats.html","200","text/html","6699"],
+["20230111005019","https://planet4589.org/space/con/star/stats.html","200","text/html","6699"],
+["20230111100657","https://planet4589.org/space/con/star/stats.html","200","text/html","6699"],
+["20230115173829","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","629"],
+["20230116174957","https://planet4589.org/space/con/star/stats.html","200","text/html","6676"],
+["20230116175556","https://planet4589.org/space/con/star/stats.html","200","text/html","6677"],
+["20230118220841","https://planet4589.org/space/con/star/stats.html","200","text/html","6681"],
+["20230120090232","https://planet4589.org/space/con/star/stats.html","200","text/html","7835"],
+["20230123171055","https://planet4589.org/space/con/star/stats.html","200","text/html","6765"],
+["20230123171742","https://planet4589.org/space/con/star/stats.html","200","text/html","6765"],
+["20230125201042","https://planet4589.org/space/con/star/stats.html","200","text/html","6761"],
+["20230125204356","https://planet4589.org/space/con/star/stats.html","200","text/html","6760"],
+["20230126020823","https://planet4589.org/space/con/star/stats.html","200","text/html","6761"],
+["20230126140925","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20230127194548","https://planet4589.org/space/con/star/stats.html","200","text/html","7941"],
+["20230129062703","https://planet4589.org/space/con/star/stats.html","200","text/html","7011"],
+["20230129100546","https://planet4589.org/space/con/star/stats.html","200","text/html","6858"],
+["20230129112011","https://planet4589.org/space/con/star/stats.html","200","text/html","6858"],
+["20230129232729","https://planet4589.org/space/con/star/stats.html","200","text/html","6836"],
+["20230130165212","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","628"],
+["20230131144109","https://planet4589.org/space/con/star/stats.html","200","text/html","7126"],
+["20230131174028","https://planet4589.org/space/con/star/stats.html","200","text/html","7126"],
+["20230131225306","https://planet4589.org/space/con/star/stats.html","200","text/html","7126"],
+["20230131230802","https://planet4589.org/space/con/star/stats.html","200","text/html","7127"],
+["20230201092849","https://planet4589.org/space/con/star/stats.html","200","text/html","7143"],
+["20230201174116","https://planet4589.org/space/con/star/stats.html","200","text/html","7167"],
+["20230202054035","https://planet4589.org/space/con/star/stats.html","200","text/html","7155"],
+["20230202060738","https://planet4589.org/space/con/star/stats.html","200","text/html","7153"],
+["20230202133343","https://planet4589.org/space/con/star/stats.html","200","text/html","7134"],
+["20230202162639","https://planet4589.org/space/con/star/stats.html","200","text/html","7155"],
+["20230203115213","https://planet4589.org/space/con/star/stats.html","200","text/html","7187"],
+["20230203223746","https://planet4589.org/space/con/star/stats.html","200","text/html","7206"],
+["20230204142310","https://planet4589.org/space/con/star/stats.html","200","text/html","7228"],
+["20230207010606","https://planet4589.org/space/con/star/stats.html","200","text/html","7110"],
+["20230211112532","https://planet4589.org/space/con/star/stats.html","200","text/html","7192"],
+["20230212202152","https://planet4589.org/space/con/star/stats.html","200","text/html","7252"],
+["20230212213359","https://planet4589.org/space/con/star/stats.html","200","text/html","7266"],
+["20230212213931","https://planet4589.org/space/con/star/stats.html","200","text/html","7267"],
+["20230212232012","https://planet4589.org/space/con/star/stats.html","200","text/html","7267"],
+["20230212232017","https://planet4589.org/space/con/star/stats.html","200","text/html","7269"],
+["20230213003337","https://planet4589.org/space/con/star/stats.html","200","text/html","7276"],
+["20230213003854","https://planet4589.org/space/con/star/stats.html","200","text/html","7274"],
+["20230213024929","https://planet4589.org/space/con/star/stats.html","200","text/html","7276"],
+["20230213172418","https://planet4589.org/space/con/star/stats.html","200","text/html","7276"],
+["20230214205217","https://planet4589.org/space/con/star/stats.html","200","text/html","7260"],
+["20230215052049","https://planet4589.org/space/con/star/stats.html","200","text/html","7266"],
+["20230216035520","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230217013609","https://planet4589.org/space/con/star/stats.html","200","text/html","7328"],
+["20230217120540","https://planet4589.org/space/con/star/stats.html","200","text/html","7327"],
+["20230217121200","https://planet4589.org/space/con/star/stats.html","200","text/html","7328"],
+["20230217183813","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230217200347","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230217200938","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230217235409","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230218000338","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20230218000923","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20230224215124","https://planet4589.org/space/con/star/stats.html","200","text/html","7355"],
+["20230224220803","https://planet4589.org/space/con/star/stats.html","200","text/html","7353"],
+["20230227112337","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","626"],
+["20230227150654","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","626"],
+["20230227220215","https://planet4589.org/space/con/star/stats.html","200","text/html","7143"],
+["20230228022156","https://planet4589.org/space/con/star/stats.html","200","text/html","7431"],
+["20230228072429","https://planet4589.org/space/con/star/stats.html","200","text/html","7429"],
+["20230228092215","https://planet4589.org/space/con/star/stats.html","200","text/html","7431"],
+["20230228112155","https://planet4589.org/space/con/star/stats.html","200","text/html","7430"],
+["20230228211547","https://planet4589.org/space/con/star/stats.html","200","text/html","7435"],
+["20230228212221","https://planet4589.org/space/con/star/stats.html","200","text/html","7433"],
+["20230228220809","https://planet4589.org/space/con/star/stats.html","200","text/html","7436"],
+["20230228221328","https://planet4589.org/space/con/star/stats.html","200","text/html","7433"],
+["20230301115603","https://planet4589.org/space/con/star/stats.html","200","text/html","7433"],
+["20230301120639","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301121340","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301123737","https://planet4589.org/space/con/star/stats.html","200","text/html","7433"],
+["20230301123824","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301125545","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301132350","https://planet4589.org/space/con/star/stats.html","200","text/html","7435"],
+["20230301133829","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301133952","https://planet4589.org/space/con/star/stats.html","200","text/html","7431"],
+["20230301135609","https://planet4589.org/space/con/star/stats.html","200","text/html","7436"],
+["20230301145441","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301152348","https://planet4589.org/space/con/star/stats.html","200","text/html","7434"],
+["20230301184654","https://planet4589.org/space/con/star/stats.html","200","text/html","7218"],
+["20230301211910","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","617"],
+["20230301212526","https://planet4589.org/space/con/star/stats.html","200","text/html","7433"],
+["20230302062335","https://planet4589.org/space/con/star/stats.html","200","text/html","7436"],
+["20230302190538","https://planet4589.org/space/con/star/stats.html","200","text/html","7438"],
+["20230303012318","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","620"],
+["20230303013844","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230303014413","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","622"],
+["20230303145157","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230303234912","https://planet4589.org/space/con/star/stats.html","200","text/html","7474"],
+["20230303235559","https://planet4589.org/space/con/star/stats.html","200","text/html","7471"],
+["20230304155814","https://planet4589.org/space/con/star/stats.html","200","text/html","7259"],
+["20230304162054","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230304221903","https://planet4589.org/space/con/star/stats.html","200","text/html","7479"],
+["20230304222506","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230304230621","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","622"],
+["20230305075107","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20230305112252","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","625"],
+["20230305153849","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230305234924","https://planet4589.org/space/con/star/stats.html","200","text/html","8795"],
+["20230306033743","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","624"],
+["20230306192222","https://planet4589.org/space/con/star/stats.html","200","text/html","7463"],
+["20230308092029","https://planet4589.org/space/con/star/stats.html","200","text/html","7459"],
+["20230308092646","https://planet4589.org/space/con/star/stats.html","200","text/html","7459"],
+["20230308111625","https://www.planet4589.org/space/con/star/stats.html","200","text/html","5954"],
+["20230309112518","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230309192145","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230309192823","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","623"],
+["20230311110821","https://planet4589.org/space/con/star/stats.html","200","text/html","7486"],
+["20230313135308","https://planet4589.org/space/con/star/stats.html","200","text/html","7565"],
+["20230313143443","https://planet4589.org/space/con/star/stats.html","200","text/html","7565"],
+["20230313144132","https://planet4589.org/space/con/star/stats.html","200","text/html","7562"],
+["20230313153817","https://planet4589.org/space/con/star/stats.html","200","text/html","7564"],
+["20230313184116","https://planet4589.org/space/con/star/stats.html","200","text/html","8846"],
+["20230313192700","https://planet4589.org/space/con/star/stats.html","200","text/html","7564"],
+["20230314191609","https://planet4589.org/space/con/star/stats.html","200","text/html","7366"],
+["20230316221553","http://www.planet4589.org/space/con/star/stats.html","200","text/html","8920"],
+["20230317135417","https://planet4589.org/space/con/star/stats.html","200","text/html","7585"],
+["20230317162042","https://planet4589.org/space/con/star/stats.html","200","text/html","7582"],
+["20230317162758","https://planet4589.org/space/con/star/stats.html","200","text/html","7585"],
+["20230317173840","https://planet4589.org/space/con/star/stats.html","200","text/html","7584"],
+["20230317223906","https://planet4589.org/space/con/star/stats.html","200","text/html","7623"],
+["20230321214335","https://planet4589.org/space/con/star/stats.html","200","text/html","7924"],
+["20230322055609","https://planet4589.org/space/con/star/stats.html","200","text/html","7920"],
+["20230322080652","https://planet4589.org/space/con/star/stats.html","200","text/html","7919"],
+["20230322192748","https://planet4589.org/space/con/star/stats.html","200","text/html","7919"],
+["20230324133310","https://planet4589.org/space/con/star/stats.html","200","text/html","7930"],
+["20230324172632","https://planet4589.org/space/con/star/stats.html","200","text/html","7962"],
+["20230327134138","http://planet4589.org/space/con/star/stats.html","200","text/html","8116"],
+["20230329121109","https://planet4589.org/space/con/star/stats.html","200","text/html","7971"],
+["20230329123714","https://planet4589.org/space/con/star/stats.html","200","text/html","7966"],
+["20230329132342","https://planet4589.org/space/con/star/stats.html","200","text/html","7968"],
+["20230330194043","https://planet4589.org/space/con/star/stats.html","200","text/html","7973"],
+["20230330205430","https://planet4589.org/space/con/star/stats.html","200","text/html","7972"],
+["20230331191409","https://planet4589.org/space/con/star/stats.html","200","text/html","7978"],
+["20230331195502","https://planet4589.org/space/con/star/stats.html","200","text/html","7976"],
+["20230331210735","https://planet4589.org/space/con/star/stats.html","200","text/html","7978"],
+["20230403142722","http://planet4589.org/space/con/star/stats.html","200","text/html","6234"],
+["20230404222257","https://planet4589.org/space/con/star/stats.html","200","text/html","8052"],
+["20230404222906","https://planet4589.org/space/con/star/stats.html","200","text/html","8053"],
+["20230405011100","https://planet4589.org/space/con/star/stats.html","200","text/html","8052"],
+["20230417123700","http://www.planet4589.org/space/con/star/stats.html","200","text/html","8108"],
+["20230419151346","https://planet4589.org/space/con/star/stats.html","200","text/html","7748"],
+["20230420111747","https://planet4589.org/space/con/star/stats.html","200","text/html","8133"],
+["20230427045745","https://planet4589.org/space/con/star/stats.html","200","text/html","7993"],
+["20230428054701","https://planet4589.org/space/con/star/stats.html","200","text/html","7695"],
+["20230504050301","https://planet4589.org/space/con/star/stats.html","200","text/html","8345"],
+["20230511063956","https://planet4589.org/space/con/star/stats.html","200","text/html","8458"],
+["20230518140544","https://planet4589.org/space/con/star/stats.html","200","text/html","8462"],
+["20230519104518","https://planet4589.org/space/con/star/stats.html","-","warc/revisit","605"],
+["20230527023356","https://planet4589.org/space/con/star/stats.html","200","text/html","8191"],
+["20230605004040","https://planet4589.org/space/con/star/stats.html","200","text/html","8765"],
+["20230605180132","http://www.planet4589.org/space/con/star/stats.html","200","text/html","8778"],
+["20230606091608","https://planet4589.org/space/con/star/stats.html","200","text/html","8587"],
+["20230607065642","https://www.planet4589.org/space/con/star/stats.html","200","text/html","8624"],
+["20230616113941","https://planet4589.org/space/con/star/stats.html","200","text/html","8686"],
+["20230621145350","https://planet4589.org/space/con/star/stats.html","200","text/html","8672"],
+["20230621195130","https://planet4589.org/space/con/star/stats.html","200","text/html","8673"]
+];
+
+async function fetchArchiveData(timestamp: string): Promise<IStats[]> {
+  try {
+    // Get the base URL dynamically
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    const path = `${baseUrl}/api/archive?timestamp=${timestamp}`;
+    const response = await fetch(path);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch current data: ${response.status}`);
+    }
+    
+    const data: IStats[] = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching current data:', error);
+    throw error;
+  }
+}
+
+async function storeDataInDatabase(data: IStats[], timestamp: string): Promise<void> {
+  try {
+    // Get the current timestamp
+    // timestamp format is YYYYMMDDhhmmss in string
+    // convert to Date object
+    // example: 20230621195130 -> 2023-06-21 19:51:30 -> June 21, 2023 19:51:30 -> new Date(2023, 05, 21, 19, 51, 30) (month is 0-indexed)
+
+    const currentTimestamp = new Date(
+      parseInt(timestamp.slice(0, 4)), // year
+      parseInt(timestamp.slice(4, 6)) - 1, // month (0-indexed)
+      parseInt(timestamp.slice(6, 8)), // day
+      parseInt(timestamp.slice(8, 10)), // hour
+      parseInt(timestamp.slice(10, 12)), // minute
+      parseInt(timestamp.slice(12, 14)) // second
+    );
+    console.log('timestamp:', timestamp);
+    console.log('Storing data with timestamp:', currentTimestamp.toISOString());
+
+    // Prepare data for bulk insert
+    const bulkData = data.map(stats => ({
+      timestamp: currentTimestamp,
+      mission: stats.mission,
+      total_sats_launched: stats.total_sats_launched,
+      failed_to_orbit: stats.failed_to_orbit,
+      early_deorbit: stats.early_deorbit,
+      disposal_complete: stats.disposal_complete,
+      reentry_after_fail: stats.reentry_after_fail,
+      total_down: stats.total_down,
+      total_in_orbit: stats.total_in_orbit,
+      screened: stats.screened,
+      failed_decaying: stats.failed_decaying,
+      graveyard: stats.graveyard,
+      total_working: stats.total_working,
+      disposal_underway: stats.disposal_underway,
+      out_of_constellation: stats.out_of_constellation,
+      anomaly: stats.anomaly,
+      reserve_relocating: stats.reserve_relocating,
+      special: stats.special,
+      drift: stats.drift,
+      ascent: stats.ascent,
+      operational_orbit: stats.operational_orbit,
+      number: stats.number,
+      year: stats.year,
+      day: stats.day,
+      date: stats.date,
+      total_operational: stats.total_operational,
+    }));
+
+    // Bulk insert all records in a single operation
+    await prisma.stats.createMany({
+      data: bulkData,
+    });
+    
+    console.log(`Successfully stored ${data.length} records at ${currentTimestamp.toISOString()}`);
+  } catch (error) {
+    console.error('Error storing data in database:', error);
+    throw error;
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    console.log('Scheduler triggered at:', new Date().toISOString());
+
+    let unprocessedTimestamps: string[] = [];
+
+    // reverse the array to start from the oldest
+    const reversed = archives.reverse();
+    for (let i = 0; i < archives.length; i++) {
+      const [timestamp] = archives[i];
+      console.log(`Processing archive with timestamp: ${timestamp}`);
+      // Fetch data from the /api/current endpoint
+      const currentData = await fetchArchiveData(timestamp);
+      console.log(`Fetched ${currentData.length} records from /api/archive`);
+      // add random delay between 1 and 3 seconds to avoid rate limiting
+      const delay = Math.floor(Math.random() * 2000) + 1000;
+      console.log(`Waiting for ${delay} ms before next request...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+          
+      if (!currentData || currentData.length === 0) {
+        console.warn(`No data returned for timestamp: ${timestamp}`);
+        throw new Error(`No data returned for timestamp: ${timestamp}`);
+      }
+      
+      // Store the data in the database
+      await storeDataInDatabase(currentData, timestamp);
+      // only send the first 3 for testing
+      // await storeDataInDatabase(currentData.slice(0, 3), timestamp);
+    }
+
+    
+    return NextResponse.json({
+      success: true,
+      message: `Successfully processed ${archives.length} records`,
+      timestamp: new Date().toISOString(),
+      unprocessedTimestamps,
+    });
+    
+  } catch (error) {
+    console.error('Scheduler error:', error);
+    
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  // Allow both GET and POST methods for flexibility
+  return GET(request);
+}

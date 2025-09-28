@@ -808,13 +808,15 @@ const archives = [
 ["20250919185305","https://planet4589.org/space/con/star/stats.html","200","text/html","24839"],
 ["20250920102841","https://planet4589.org/space/con/star/stats.html","200","text/html","24916"],
 ["20250922131810","https://planet4589.org/space/con/star/stats.html","200","text/html","24921"],
-["20250926202651","https://planet4589.org/space/con/star/stats.html","200","text/html","25084"]];
+["20250926202651","https://planet4589.org/space/con/star/stats.html","200","text/html","25084"]
+];
 
 async function fetchArchiveData(timestamp: string): Promise<IStats[]> {
   try {
     // Get the base URL dynamically
     const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/archive?timestamp=${timestamp}`);
+    const path = `${baseUrl}/api/archive?timestamp=${timestamp}`;
+    const response = await fetch(path);
 
     if (!response.ok) {
       throw new Error(`Failed to fetch current data: ${response.status}`);
@@ -901,6 +903,7 @@ export async function GET(request: Request) {
       console.log(`Processing archive with timestamp: ${timestamp}`);
       // Fetch data from the /api/current endpoint
       const currentData = await fetchArchiveData(timestamp);
+      console.log(`Fetched ${currentData.length} records from /api/archive`);
       // add random delay between 1 and 3 seconds to avoid rate limiting
       const delay = Math.floor(Math.random() * 2000) + 1000;
       console.log(`Waiting for ${delay} ms before next request...`);
@@ -910,7 +913,7 @@ export async function GET(request: Request) {
         console.warn(`No data returned for timestamp: ${timestamp}`);
         throw new Error(`No data returned for timestamp: ${timestamp}`);
       }
-      console.log(`Fetched ${currentData.length} records from /api/current`);
+      
       // Store the data in the database
       await storeDataInDatabase(currentData, timestamp);
       // only send the first 3 for testing
