@@ -31,15 +31,28 @@ interface IStats {
 
 async function fetchCurrentData(): Promise<IStats[]> {
   try {
-    // Get the base URL dynamically
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    // Get the base URL dynamically - handle Vercel environment properly
+    let baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL;
+    
+    // In Vercel, VERCEL_URL doesn't include the protocol
+    if (process.env.VERCEL_URL && !baseUrl?.startsWith('http')) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    }
+    
+    // Fallback to localhost for development
+    if (!baseUrl) {
+      baseUrl = 'http://localhost:3000';
+    }
+
+    console.log(`Fetching data from: ${baseUrl}/api/current`);
     const response = await fetch(`${baseUrl}/api/current`);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch current data: ${response.status}`);
+      throw new Error(`Failed to fetch current data: ${response.status} - ${response.statusText}`);
     }
     
     const data: IStats[] = await response.json();
+    console.log(`Successfully fetched ${data.length} records`);
     return data;
   } catch (error) {
     console.error('Error fetching current data:', error);
@@ -95,33 +108,58 @@ async function storeDataInDatabase(data: IStats[]): Promise<void> {
 }
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
+  console.log('=== CRON JOB START ===');
+  console.log('Scheduler triggered at:', new Date().toISOString());
+  console.log('Environment variables check:');
+  console.log('- VERCEL_URL:', process.env.VERCEL_URL);
+  console.log('- NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+  console.log('- NODE_ENV:', process.env.NODE_ENV);
+  
   try {
-    console.log('Scheduler triggered at:', new Date().toISOString());
-    
     // Fetch data from the /api/current endpoint
     const currentData = await fetchCurrentData();
     
     if (!currentData || currentData.length === 0) {
-      throw new Error('No data received from /api/current endpoint');
+      const errorMsg = 'No data received from /api/current endpoint';
+      console.error('ERROR:', errorMsg);
+      throw new Error(errorMsg);
     }
+    
+    console.log(`Data validation passed - ${currentData.length} records received`);
     
     // Store the data in the database
     await storeDataInDatabase(currentData);
     
+    const duration = Date.now() - startTime;
+    const successMsg = `Successfully processed ${currentData.length} records in ${duration}ms`;
+    console.log('SUCCESS:', successMsg);
+    console.log('=== CRON JOB END (SUCCESS) ===');
+    
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${currentData.length} records`,
+      message: successMsg,
       timestamp: new Date().toISOString(),
+      duration: duration,
+      recordCount: currentData.length,
     });
     
   } catch (error) {
-    console.error('Scheduler error:', error);
+    const duration = Date.now() - startTime;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    
+    console.error('=== CRON JOB ERROR ===');
+    console.error('Error details:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('Duration until error:', duration + 'ms');
+    console.error('=== CRON JOB END (ERROR) ===');
     
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error: errorMessage,
         timestamp: new Date().toISOString(),
+        duration: duration,
       },
       { status: 500 }
     );
